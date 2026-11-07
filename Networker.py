@@ -1,6 +1,6 @@
 import socket, threading, time, itertools
 import scapy.all as scapy
-import common_ports
+import common_ports, port_scanner
 
 def split_list(l):
     x = len(l)
@@ -41,14 +41,15 @@ def find_devices():
     
     return device_ips
 
-def port_scan_threader(hard=False):
-    global LOCAL_SUBNET, COMMON_PORTS, DEVICES, N_PORTS_SCANNED
+def port_scan_threader(hard=False, type="TCP"):
+    global LOCAL_SUBNET, COMMON_TCP_PORTS, DEVICES, N_PORTS_SCANNED, COMMON_UDP_PORTS
     N_PORTS_SCANNED = 0
-    ports = range(65536) if hard else COMMON_PORTS
+    ports = range(65536) if hard else list(COMMON_TCP_PORTS.keys()) 
+    if type=="UDP": ports = list(COMMON_UDP_PORTS.keys())
     combis = split_list(list(itertools.product(DEVICES, ports)))
     threads = []
     for l in combis:
-        thread = threading.Thread(target=port_scan, args=(l,))
+        thread = threading.Thread(target=port_scan, args=(l,type))
         threads.append(thread)
         thread.start()
     thread = threading.Thread(target=percentage_bar, args=(len(ports),len(DEVICES)))
@@ -57,17 +58,16 @@ def port_scan_threader(hard=False):
     for t in threads:
         t.join()
 
-def port_scan(combi=[]):
-    global COMMON_PORTS, LOCAL_SUBNET, PORT_SCAN_LOG, N_PORTS_SCANNED
-    if not combi: return
+def port_scan(combi=[], type="TCP"):
+    global PORT_SCAN_LOG, N_PORTS_SCANNED
     for i in combi:
         ip,port = i
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(0.8)
-        try: s.connect((ip, port))
-        except Exception: continue
-        finally: s.close(); N_PORTS_SCANNED+=1
-        PORT_SCAN_LOG[ip] += [port]
+        N_PORTS_SCANNED+=1
+        if type=="TCP" and port_scanner.tcp_scan(port, ip):
+            PORT_SCAN_LOG[ip] += [port]
+        elif type=="UDP" and port_scanner.udp_scan(port, ip):
+            PORT_SCAN_LOG[ip] += [port]
+
 
 def print_port_scan_log():
     global PORT_SCAN_LOG
@@ -78,12 +78,19 @@ def print_port_scan_log():
         except socket.herror:
             print(f"{key} [Name Not Found]:")
         
-        if PORT_SCAN_LOG[key]: print(f"Open ports: \n\t{sorted(PORT_SCAN_LOG[key])}\n")
+        if PORT_SCAN_LOG[key]:
+            print(f"|  PORT  |        SERVICE        |")
+            for i in sorted(PORT_SCAN_LOG[key]):
+                print(f'|{i:<4}\t |{list(COMMON_TCP_PORTS.get(i, {"Unknown":""}).keys())[0]:<17}\t |')
+            print()
         else: print("There are no open ports.\n")
 
 # --------- COMMON PORTS -----------
 COMMON_TCP_PORTS = {port:{meaning:category}
                     for category,meaning_dict in common_ports.COMMON_TCP_PORTS.items()
+                    for port,meaning in meaning_dict.items()}
+COMMON_UDP_PORTS = {port:{meaning:category}
+                    for category,meaning_dict in common_ports.COMMON_UDP_PORTS.items()
                     for port,meaning in meaning_dict.items()}
 
 # -------------- MAIN --------------
@@ -113,7 +120,7 @@ def main():
             else: break 
     print()
     start_time = time.perf_counter()
-
+    
     if type==1: print(f"Your local IP address is {get_local_ip()}")
     elif type==2: print(DEVICES)
     elif type==3: port_scan_threader(); print_port_scan_log()
