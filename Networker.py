@@ -24,10 +24,12 @@ def get_local_ip():
 
 def find_devices():
     global LOCAL_SUBNET
+
     arp_request = scapy.ARP(pdst=LOCAL_SUBNET+"0/24")
     broadcast = scapy.Ether(dst="ff:ff:ff:ff:ff:ff")
     arp_broadcast = broadcast/arp_request
     device_ips = [device[1].psrc for device in scapy.srp(arp_broadcast, timeout=1, verbose=False)[0]]
+    
     return device_ips
 
 def port_scan_threader(hard=False):
@@ -52,8 +54,14 @@ def port_scan(combi=[]):
         try: s.connect((ip, port))
         except Exception: continue
         finally: s.close()
-        PORT_SCAN_LOG[ip] += port
+        PORT_SCAN_LOG[ip] += [port]
 
+def print_port_scan_log():
+    global PORT_SCAN_LOG
+    for key in PORT_SCAN_LOG.keys():
+        name, _, _ = socket.gethostbyaddr(key)
+        print(f"{key} [{name}]:")
+        print(f"Ports {PORT_SCAN_LOG[key]} are open on this device.\n")
 
 # -------------- MAIN --------------
 COMMON_PORTS = [21, 22, 23, 25, 53, 67, 68, 80, 110, 139, 143, 161, 162, 389, 443, 445, 548, 554, 631, 993, 995, 1433, 1900, 2049, 3306, 3389, 5000, 5353, 5357, 5432, 5900, 8008, 8009, 8080, 8443, 9100, 32400]
@@ -74,12 +82,12 @@ while True:
     else:
         if type not in [1,2,3,4]: print("Type an existing mode [1,2,3,4].")
         else: break 
-
+print()
 
 start_time = time.perf_counter()
 if type==1: print(f"Your local IP address is {get_local_ip()}")
 elif type==2: print(devices)
-elif type==3: port_scan_threader(); print(PORT_SCAN_LOG)
+elif type==3: port_scan_threader(); print_port_scan_log()
 elif type==4: port_scan_threader(hard=True); print(PORT_SCAN_LOG)
 print(f"Execution time: {time.perf_counter()-start_time:.6f} seconds")
 
