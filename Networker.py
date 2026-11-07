@@ -18,7 +18,7 @@ def split_list(l):
 def get_local_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try: s.connect(("8.8.8.8", 80)); ip = s.getsockname()[0]
-    except Exception: ip = "127.0.0.1"
+    except Exception: ip = "{IP could not be found}"
     finally: s.close()
     return ip
 
@@ -33,9 +33,9 @@ def find_devices():
     return device_ips
 
 def port_scan_threader(hard=False):
-    global LOCAL_SUBNET, COMMON_PORTS
+    global LOCAL_SUBNET, COMMON_PORTS, DEVICES
     ports = range(65536) if hard else COMMON_PORTS
-    combis = split_list(list(itertools.product(find_devices(), ports)))
+    combis = split_list(list(itertools.product(DEVICES, ports)))
     threads = []
     for l in combis:
         thread = threading.Thread(target=port_scan, args=(l,))
@@ -70,9 +70,13 @@ def print_port_scan_log():
 
 # -------------- MAIN --------------
 COMMON_PORTS = [21, 22, 23, 25, 53, 67, 68, 80, 110, 139, 143, 161, 162, 389, 443, 445, 548, 554, 631, 993, 995, 1433, 1900, 2049, 3306, 3389, 5000, 5353, 5357, 5432, 5900, 8008, 8009, 8080, 8443, 9100, 32400]
-LOCAL_SUBNET = ".".join(get_local_ip().split(".")[:3]) + "."
-devices = find_devices()
-PORT_SCAN_LOG = dict(zip(devices, [[] for _ in range(len(devices))]))
+
+LOCAL_IP = get_local_ip()
+if LOCAL_IP[0]=="{": raise SystemExit("Exiting: Local IP fell back to loopback.")
+LOCAL_SUBNET = str(".".join(LOCAL_IP.split(".")[:3]) + ".")
+
+DEVICES = find_devices()
+PORT_SCAN_LOG = dict(zip(DEVICES, [[] for _ in range(len(DEVICES))]))
 
 print("---------- NETWORKER ----------")
 print("[1] Find your local IP address on your network")
@@ -92,7 +96,7 @@ print()
 start_time = time.perf_counter()
 
 if type==1: print(f"Your local IP address is {get_local_ip()}")
-elif type==2: print(devices)
+elif type==2: print(DEVICES)
 elif type==3: port_scan_threader(); print_port_scan_log()
 elif type==4: port_scan_threader(hard=True); print_port_scan_log()
 
