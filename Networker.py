@@ -1,5 +1,6 @@
 import socket, threading, time, itertools
 import scapy.all as scapy
+import common_ports
 
 def split_list(l):
     x = len(l)
@@ -22,6 +23,14 @@ def get_local_ip():
     finally: s.close()
     return ip
 
+def percentage_bar(a,b):
+    global N_PORTS_SCANNED
+    total = a*b
+    while N_PORTS_SCANNED!=total:
+        print(f"\r\033[K{N_PORTS_SCANNED} ports have been scanned out of {total} ports. {(N_PORTS_SCANNED/total)*100}%", end="")
+        time.sleep(0.05)
+    print(f"\r\033[K{N_PORTS_SCANNED} ports have been scanned out of {total} ports. 100%")
+
 def find_devices():
     global LOCAL_SUBNET
 
@@ -33,7 +42,8 @@ def find_devices():
     return device_ips
 
 def port_scan_threader(hard=False):
-    global LOCAL_SUBNET, COMMON_PORTS, DEVICES
+    global LOCAL_SUBNET, COMMON_PORTS, DEVICES, N_PORTS_SCANNED
+    N_PORTS_SCANNED = 0
     ports = range(65536) if hard else COMMON_PORTS
     combis = split_list(list(itertools.product(DEVICES, ports)))
     threads = []
@@ -41,11 +51,14 @@ def port_scan_threader(hard=False):
         thread = threading.Thread(target=port_scan, args=(l,))
         threads.append(thread)
         thread.start()
+    thread = threading.Thread(target=percentage_bar, args=(len(ports),len(DEVICES)))
+    threads.append(thread)
+    thread.start()
     for t in threads:
         t.join()
 
 def port_scan(combi=[]):
-    global COMMON_PORTS, LOCAL_SUBNET, PORT_SCAN_LOG
+    global COMMON_PORTS, LOCAL_SUBNET, PORT_SCAN_LOG, N_PORTS_SCANNED
     if not combi: return
     for i in combi:
         ip,port = i
@@ -53,7 +66,7 @@ def port_scan(combi=[]):
         s.settimeout(0.8)
         try: s.connect((ip, port))
         except Exception: continue
-        finally: s.close()
+        finally: s.close(); N_PORTS_SCANNED+=1
         PORT_SCAN_LOG[ip] += [port]
 
 def print_port_scan_log():
@@ -68,8 +81,12 @@ def print_port_scan_log():
         if PORT_SCAN_LOG[key]: print(f"Open ports: \n\t{sorted(PORT_SCAN_LOG[key])}\n")
         else: print("There are no open ports.\n")
 
+# --------- COMMON PORTS -----------
+COMMON_TCP_PORTS = {port:{meaning:category}
+                    for category,meaning_dict in common_ports.COMMON_TCP_PORTS.items()
+                    for port,meaning in meaning_dict.items()}
+
 # -------------- MAIN --------------
-COMMON_PORTS = [21, 22, 23, 25, 53, 67, 68, 80, 110, 139, 143, 161, 162, 389, 443, 445, 548, 554, 631, 993, 995, 1433, 1900, 2049, 3306, 3389, 5000, 5353, 5357, 5432, 5900, 8008, 8009, 8080, 8443, 9100, 32400]
 print("-------------------- NETWORKER --------------------")
 
 def main():
