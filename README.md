@@ -72,4 +72,4 @@ This project is intended for educational purposes. Use it only on systems and da
 
 ## License
 
-MIT LISENCE
+MIT LICENSE
