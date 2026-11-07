@@ -34,7 +34,7 @@ def find_devices():
 
 def port_scan_threader(hard=False):
     global LOCAL_SUBNET, COMMON_PORTS
-    ports = range(10000) if hard else COMMON_PORTS
+    ports = range(65536) if hard else COMMON_PORTS
     combis = split_list(list(itertools.product(find_devices(), ports)))
     threads = []
     for l in combis:
@@ -59,9 +59,14 @@ def port_scan(combi=[]):
 def print_port_scan_log():
     global PORT_SCAN_LOG
     for key in PORT_SCAN_LOG.keys():
-        name, _, _ = socket.gethostbyaddr(key)
-        print(f"{key} [{name}]:")
-        print(f"Ports {PORT_SCAN_LOG[key]} are open on this device.\n")
+        try:
+            name, _, _ = socket.gethostbyaddr(key)
+            print(f"{key} [{name}]:")
+        except socket.herror:
+            print(f"{key} [Name Not Found]:")
+        
+        if PORT_SCAN_LOG[key]: print(f"Open ports: \n\t{sorted(PORT_SCAN_LOG[key])}\n\n")
+        else: print("There are no open ports.\n\n")
 
 # -------------- MAIN --------------
 COMMON_PORTS = [21, 22, 23, 25, 53, 67, 68, 80, 110, 139, 143, 161, 162, 389, 443, 445, 548, 554, 631, 993, 995, 1433, 1900, 2049, 3306, 3389, 5000, 5353, 5357, 5432, 5900, 8008, 8009, 8080, 8443, 9100, 32400]
@@ -73,7 +78,7 @@ print("---------- NETWORKER ----------")
 print("[1] Find your local IP address on your network")
 print("[2] Scan for devices on your network")
 print("[3] Scan common open ports on your network")
-print("[4] Scan for every port on your network\n")
+print("[4] Scan for every port on your network (VERY SLOW)\n")
 
 while True:
     type = input("Enter a function : ")
@@ -85,11 +90,11 @@ while True:
 print()
 
 start_time = time.perf_counter()
+
 if type==1: print(f"Your local IP address is {get_local_ip()}")
 elif type==2: print(devices)
 elif type==3: port_scan_threader(); print_port_scan_log()
-elif type==4: port_scan_threader(hard=True); print(PORT_SCAN_LOG)
+elif type==4: port_scan_threader(hard=True); print_port_scan_log()
+
 print(f"Execution time: {time.perf_counter()-start_time:.6f} seconds")
-
-
 input("\nPress Enter to continue...")
