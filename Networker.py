@@ -65,8 +65,8 @@ def print_port_scan_log():
         except socket.herror:
             print(f"{key} [Name Not Found]:")
         
-        if PORT_SCAN_LOG[key]: print(f"Open ports: \n\t{sorted(PORT_SCAN_LOG[key])}\n\n")
-        else: print("There are no open ports.\n\n")
+        if PORT_SCAN_LOG[key]: print(f"Open ports: \n\t{sorted(PORT_SCAN_LOG[key])}\n")
+        else: print("There are no open ports.\n")
 
 # -------------- MAIN --------------
 COMMON_PORTS = [21, 22, 23, 25, 53, 67, 68, 80, 110, 139, 143, 161, 162, 389, 443, 445, 548, 554, 631, 993, 995, 1433, 1900, 2049, 3306, 3389, 5000, 5353, 5357, 5432, 5900, 8008, 8009, 8080, 8443, 9100, 32400]
@@ -96,5 +96,5 @@ elif type==2: print(devices)
 elif type==3: port_scan_threader(); print_port_scan_log()
 elif type==4: port_scan_threader(hard=True); print_port_scan_log()
 
-print(f"Execution time: {time.perf_counter()-start_time:.6f} seconds")
+print(f"\nExecution time: {time.perf_counter()-start_time:.6f} seconds")
 input("\nPress Enter to continue...")
