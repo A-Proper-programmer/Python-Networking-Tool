@@ -1,44 +1,40 @@
-# Project Name
+# Python Networking Tool
 
-> A short, clear description of what this project does and why it exists.
+> A small project, to practice networking, and to understand TCP and UDP connections.
+> It is heavily inspired by the tool **nmap**.
 
 ## Overview
 
-Explain the project in 2–4 sentences:
-- What problem does it solve?
-- Why did you build it?
-- Who might find it useful?
+- It can find devices on your local network, and check for open ports
+- It was built mainly for personal coding development, and network understanding
+- It might be useful as a simple program, with easy-to-understand logic.
 
 ## Features
 
-- Feature 1 — briefly explain what it does.
-- Feature 2 — briefly explain what it does.
-- Feature 3 — briefly explain what it does.
+- Find Local IP — It finds your IP address in your local network.
+- Find Devices — It can also find the IP addresses of devices connected to your network.
+- Port Scanning — It can check if ports on the devices are open.
+- User Friendly Logs — It can be used easily by first-time users.
 
 ## Tech Stack
 
 - **Language:** Python
-- **Libraries:** List the libraries actually used.
-- **Tools:** List relevant tools, if applicable.
+- **Libraries:** socket, threading, time, itertools, and scapy
 
 ## Getting Started
 
 ### Prerequisites
 
-- Python 3.x (specify the tested version)
-- Any additional dependencies
+- Python 3.11.3
+- Requires the ```scapy``` module
 
 ### Installation
 
 ```bash
-git clone YOUR_REPOSITORY_URL
-cd YOUR_PROJECT_FOLDER
-```
+git clone https://github.com/A-Proper-programmer/Python-Networking-Tool.git
+cd Python-Networking-Tool
 
-Install dependencies if required:
-
-```bash
-pip install -r requirements.txt
+pip install scapy
 ```
 
 ### Usage
@@ -46,65 +42,34 @@ pip install -r requirements.txt
 Explain how to run the project.
 
 ```bash
-python main.py
+python Networker.py
 ```
-
-Replace the example command with the actual command for your project.
-
-## Example
-
-Show a small example of how the project works.
-
-```text
-Example input:
-...
-
-Example output:
-...
-```
-
-Use real, tested output. Remove this section if it doesn't apply.
 
 ## Project Structure
 
 ```text
-project-name/
-├── src/
-├── tests/
+Python-Networking-Tool/
+├── Networker.py
 ├── README.md
-├── requirements.txt
 └── LICENSE
 ```
 
-Adjust this tree to match your actual files and folders.
-
 ## What I Learned
 
-- A concept I learned while building this project.
-- A technical challenge I encountered.
-- How I solved it or what I would do differently.
-
-## Limitations
-
-- Document known limitations or unfinished features.
-- Explain important assumptions or cases the project doesn't handle.
+- I learnt how to use threading effectively, and scan ports.
+- The ```port_scan()``` was threaded, resulting in a cascade of errors, when one occurred.
+- I solved it easily by reducing the number of threads down to 3 (from 256).
 
 ## Future Improvements
 
-- [ ] Improvement 1
-- [ ] Improvement 2
-- [ ] Improvement 3
-
-## Testing
-
-Explain how you tested the project and which cases you checked.
+- [ ] Try to find what service runs on each open port.
+- [ ] Make a GUI version.
+- [ ] Implement argument parsing through a shell.
 
 ## Disclaimer
-
-Include this section when relevant, especially for security-related tools.
 
 This project is intended for educational purposes. Use it only on systems and data you own or have explicit permission to test.
 
 ## License
 
-Specify the license you chose, or state that no license has been specified yet.
+MIT LISENCE
