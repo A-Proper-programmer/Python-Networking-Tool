@@ -86,12 +86,8 @@ def print_port_scan_log():
         else: print("There are no open ports.\n")
 
 # --------- COMMON PORTS -----------
-COMMON_TCP_PORTS = {port:{meaning:category}
-                    for category,meaning_dict in common_ports.COMMON_TCP_PORTS.items()
-                    for port,meaning in meaning_dict.items()}
-COMMON_UDP_PORTS = {port:{meaning:category}
-                    for category,meaning_dict in common_ports.COMMON_UDP_PORTS.items()
-                    for port,meaning in meaning_dict.items()}
+COMMON_TCP_PORTS = common_ports.COMMON_TCP_PORTS
+COMMON_UDP_PORTS = common_ports.COMMON_UDP_PORTS
 
 # -------------- MAIN --------------
 print("-------------------- NETWORKER --------------------")
@@ -121,7 +117,7 @@ def main():
     print()
     start_time = time.perf_counter()
     
-    if type==1: print(f"Your local IP address is {get_local_ip()}")
+    if type==1: print(f"Your local IP address is {LOCAL_IP}")
     elif type==2: print(DEVICES)
     elif type==3: port_scan_threader(); print_port_scan_log()
     elif type==4: port_scan_threader(hard=True); print_port_scan_log()
