@@ -1,4 +1,4 @@
-import socket, threading, time, itertools
+import socket, threading, time, itertools, concurrent.futures
 import scapy.all as scapy
 import common_ports, port_scanner
 
@@ -47,29 +47,28 @@ def port_scan_threader(hard=False, protocol="TCP"):
     ports = range(65536) if hard else list(COMMON_TCP_PORTS.keys()) 
     if protocol=="UDP": ports = list(COMMON_UDP_PORTS.keys())
 
-    combinations = split_list(list(itertools.product(DEVICES, ports)))
-    threads = []
+    combinations = list(itertools.product(DEVICES, ports))
+    '''threads = []
     for items in combinations:
         thread = threading.Thread(target=port_scan, args=(items,protocol))
-        threads.append(thread); thread.start()
-    
-    # Percentage bar
+        threads.append(thread); thread.start()'''
     thread = threading.Thread(target=percentage_bar, args=(len(ports),len(DEVICES)))
-    threads.append(thread)
     thread.start()
-    for t in threads:
-        t.join()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1024) as executor:
+        results = list(executor.map(port_scan, combinations, [protocol]*len(combinations)))
+    thread.join()
 
-def port_scan(combi=[], protocol="TCP"):
+
+def port_scan(combination, protocol="TCP"):
     global PORT_SCAN_LOG, N_PORTS_SCANNED
-    for i in combi:
-        ip,port = i
-        N_PORTS_SCANNED+=1
-        if protocol=="TCP" and port_scanner.tcp_scan(port, ip):
-            PORT_SCAN_LOG[ip].update({port:"Open"})
-        elif protocol=="UDP":
-            result = port_scanner.udp_scan(port, ip)
-            PORT_SCAN_LOG[ip].update({port:result})
+    """for i in combi:"""
+    ip,port = combination
+    N_PORTS_SCANNED+=1
+    if protocol=="TCP" and port_scanner.tcp_scan(port, ip):
+        PORT_SCAN_LOG[ip].update({port:"Open"})
+    elif protocol=="UDP":
+        result = port_scanner.udp_scan(port, ip)
+        PORT_SCAN_LOG[ip].update({port:result})
 
 
 def print_port_scan_log():
