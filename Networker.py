@@ -48,10 +48,6 @@ def port_scan_threader(hard=False, protocol="TCP"):
     if protocol=="UDP": ports = list(COMMON_UDP_PORTS.keys())
 
     combinations = list(itertools.product(DEVICES, ports))
-    '''threads = []
-    for items in combinations:
-        thread = threading.Thread(target=port_scan, args=(items,protocol))
-        threads.append(thread); thread.start()'''
     thread = threading.Thread(target=percentage_bar, args=(len(ports),len(DEVICES)))
     thread.start()
     with concurrent.futures.ThreadPoolExecutor(max_workers=1024) as executor:
