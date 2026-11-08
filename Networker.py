@@ -46,6 +46,7 @@ def port_scan_threader(hard=False, type="TCP"):
     N_PORTS_SCANNED = 0
     ports = range(65536) if hard else list(COMMON_TCP_PORTS.keys()) 
     if type=="UDP": ports = list(COMMON_UDP_PORTS.keys())
+
     combis = split_list(list(itertools.product(DEVICES, ports)))
     threads = []
     for l in combis:
@@ -64,9 +65,10 @@ def port_scan(combi=[], type="TCP"):
         ip,port = i
         N_PORTS_SCANNED+=1
         if type=="TCP" and port_scanner.tcp_scan(port, ip):
-            PORT_SCAN_LOG[ip] += [port]
-        elif type=="UDP" and port_scanner.udp_scan(port, ip):
-            PORT_SCAN_LOG[ip] += [port]
+            PORT_SCAN_LOG[ip].update({port:"Open"})
+        elif type=="UDP":
+            result = port_scanner.udp_scan(port, ip)
+            PORT_SCAN_LOG[ip].update({port:result})
 
 
 def print_port_scan_log():
@@ -77,11 +79,16 @@ def print_port_scan_log():
             print(f"{key} [{name}]:")
         except socket.herror:
             print(f"{key} [Name Not Found]:")
-        
         if PORT_SCAN_LOG[key]:
-            print(f"|  PORT  |        SERVICE        |")
-            for i in sorted(PORT_SCAN_LOG[key]):
-                print(f'|{i:<4}\t |{list(COMMON_TCP_PORTS.get(i, {"Unknown":""}).keys())[0]:<17}\t |')
+            print(f"|  PORT  |         SERVICE         |   State   |")
+            for port in sorted(list(PORT_SCAN_LOG[key].keys())):
+                print(f'|{port:<8}|', end="")
+                if port in COMMON_TCP_PORTS.keys():
+                    print(f'{list(COMMON_TCP_PORTS.get(port, {"Unknown":""}).keys())[0]:<25}|', end="")
+                elif port in COMMON_UDP_PORTS.keys():
+                    print(f'{list(COMMON_UDP_PORTS.get(port, {"Unknown":""}).keys())[0]:<25}|', end="")
+                else: print(f'{"Unknown":<25}|')
+                print(f'{PORT_SCAN_LOG[key][port]:<11}|')
             print()
         else: print("There are no open ports.\n")
 
@@ -96,10 +103,11 @@ def main():
     global LOCAL_IP, LOCAL_SUBNET, DEVICES, PORT_SCAN_LOG
     LOCAL_IP = get_local_ip()
     if LOCAL_IP[0]=="{": raise SystemExit("Exiting: Local IP fell back to loopback.")
+
     LOCAL_SUBNET = str(".".join(LOCAL_IP.split(".")[:3]) + ".")
     DEVICES = find_devices()
-    PORT_SCAN_LOG = dict(zip(DEVICES, [[] for _ in range(len(DEVICES))]))
-
+    PORT_SCAN_LOG = dict(zip(DEVICES, [{} for _ in range(len(DEVICES))]))
+    
     print()
     print("[1] Find your local IP address on your network")
     print("[2] Scan for devices on your network")
@@ -119,7 +127,7 @@ def main():
     
     if type==1: print(f"Your local IP address is {LOCAL_IP}")
     elif type==2: print(DEVICES)
-    elif type==3: port_scan_threader(); print_port_scan_log()
+    elif type==3: port_scan_threader(); port_scan_threader(type="UDP"); print_port_scan_log()
     elif type==4: port_scan_threader(hard=True); print_port_scan_log()
     elif type==0: return "E"
     print(f"\nExecution time: {time.perf_counter()-start_time:.6f} seconds\n", "-"*51, sep="")
