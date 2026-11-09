@@ -15,11 +15,12 @@
 - Find Devices — It can also find the IP addresses of devices connected to your network.
 - Port Scanning — It can check if ports on the devices are open.
 - User Friendly Logs — It can be used easily by first-time users.
+- Find the service — It finds the service running on a port using a previously given data.
 
 ## Tech Stack
 
 - **Language:** Python
-- **Libraries:** socket, threading, time, itertools, and scapy
+- **Libraries:** socket, threading, time, itertools, concurrent.futures and scapy
 
 ## Getting Started
 
@@ -50,6 +51,8 @@ python Networker.py
 ```text
 Python-Networking-Tool/
 ├── Networker.py
+├── port_scanner.py
+├── common_ports.py
 ├── README.md
 └── LICENSE
 ```
@@ -59,10 +62,10 @@ Python-Networking-Tool/
 - I learnt how to use threading effectively, and scan ports.
 - The ```port_scan()``` was threaded, resulting in a cascade of errors, when one occurred.
 - I solved it easily by reducing the number of threads down to 3 (from 256).
+- I also updated and changed it to a ThreadPoolExecutor, later.
 
 ## Future Improvements
 
-- [ ] Try to find what service runs on each open port.
 - [ ] Make a GUI version.
 - [ ] Implement argument parsing through a shell.
 
