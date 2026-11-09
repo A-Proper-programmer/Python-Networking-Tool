@@ -2,26 +2,6 @@ import socket, threading, time, itertools, concurrent.futures
 import scapy.all as scapy
 import common_ports, port_scanner
 
-def split_list(l):
-    item_count = len(l)
-    max_chunk_count = item_count // 41
-    if max_chunk_count >= 256: chunk_count=min(max_chunk_count, 1024)
-    else: chunk_count=256
-
-    size,rem = divmod(item_count,chunk_count)
-    chunks = []; start = 0; end = size
-    for i in range(chunk_count):
-        chunks.append(l[start:end+int(i<rem)])
-        start = end+int(i<rem)
-        end = start+size
-    return chunks
-
-def get_local_ip():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try: s.connect(("8.8.8.8", 80)); ip = s.getsockname()[0]
-    except Exception: ip = "{IP could not be found}"
-    finally: s.close()
-    return ip
 
 def percentage_bar(a,b):
     global N_PORTS_SCANNED
@@ -31,18 +11,26 @@ def percentage_bar(a,b):
         time.sleep(0.08)
     print(f"\r\033[K{N_PORTS_SCANNED} ports have been scanned out of {total} ports. 100%")
 
+def get_local_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try: s.connect(("8.8.8.8", 80)); ip = s.getsockname()[0]
+    except Exception: ip = "{IP could not be found}"
+    finally: s.close()
+    return ip
+
 def find_devices():
     global LOCAL_SUBNET
     arp_request = scapy.ARP(pdst=LOCAL_SUBNET+"0/24")
     broadcast = scapy.Ether(dst="ff:ff:ff:ff:ff:ff")
     arp_broadcast = broadcast/arp_request
     device_ips = [device[1].psrc for device in scapy.srp(arp_broadcast, timeout=1, verbose=False)[0]]
-
     return device_ips
+
+def get_device_data():
+    pass
 
 def port_scan_threader(hard=False, protocol="TCP"):
     global LOCAL_SUBNET, COMMON_TCP_PORTS, DEVICES, N_PORTS_SCANNED, COMMON_UDP_PORTS
-    
     N_PORTS_SCANNED = 0
     ports = range(65536) if hard else list(COMMON_TCP_PORTS.keys()) 
     if protocol=="UDP": ports = list(COMMON_UDP_PORTS.keys())
@@ -51,13 +39,11 @@ def port_scan_threader(hard=False, protocol="TCP"):
     thread = threading.Thread(target=percentage_bar, args=(len(ports),len(DEVICES)))
     thread.start()
     with concurrent.futures.ThreadPoolExecutor(max_workers=1024) as executor:
-        results = list(executor.map(port_scan, combinations, [protocol]*len(combinations)))
+        _ = list(executor.map(port_scan, combinations, [protocol]*len(combinations)))
     thread.join()
-
 
 def port_scan(combination, protocol="TCP"):
     global PORT_SCAN_LOG, N_PORTS_SCANNED
-    """for i in combi:"""
     ip,port = combination
     N_PORTS_SCANNED+=1
     if protocol=="TCP" and port_scanner.tcp_scan(port, ip):
@@ -126,7 +112,7 @@ def main():
     PORT_SCAN_LOG = dict(zip(DEVICES, [{} for _ in range(len(DEVICES))]))
     
     if choice==1: print(f"Your local IP address is {LOCAL_IP}")
-    elif choice==2: print(f'The devices on your network are {DEVICES}')
+    elif choice==2: get_device_data()
     elif choice==3: port_scan_threader(); port_scan_threader(protocol="UDP"); print_port_scan_log()
     elif choice==4: port_scan_threader(hard=True); print_port_scan_log()
     elif choice==0: return "E"
