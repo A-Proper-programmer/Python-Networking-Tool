@@ -23,8 +23,9 @@ def find_devices():
     arp_request = scapy.ARP(pdst=LOCAL_SUBNET+"0/24")
     broadcast = scapy.Ether(dst="ff:ff:ff:ff:ff:ff")
     arp_broadcast = broadcast/arp_request
-    device_IPs = [device[1].psrc for device in scapy.srp(arp_broadcast, timeout=1, verbose=False)[0]] + [LOCAL_IP]
-    device_MAC = [device[1].hwsrc for device in scapy.srp(arp_broadcast, timeout=1, verbose=False)[0]] + [getmac.get_mac_address()]
+    devices = [device[1] for device in scapy.srp(arp_broadcast, timeout=1, verbose=False)[0]]
+    device_IPs = [device[1].psrc for device in devices]+ [LOCAL_IP]
+    device_MAC = [device[1].hwsrc for device in devices] + [getmac.get_mac_address()]
     return device_IPs,  device_MAC
 
 def get_device_data():
@@ -42,22 +43,22 @@ def port_scan_threader(hard=False, protocol="TCP"):
     ports = range(65536) if hard else list(COMMON_TCP_PORTS.keys()) 
     if protocol=="UDP": ports = list(COMMON_UDP_PORTS.keys())
 
-    combinations = list(itertools.product(DEVICES_IP, ports))
     thread = threading.Thread(target=percentage_bar, args=(len(ports),len(DEVICES_IP)))
     thread.start()
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1024) as executor:
-        _ = list(executor.map(port_scan, combinations, [protocol]*len(combinations)))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=800) as executor:
+        _ = list(executor.map(port_scan, list(itertools.product(DEVICES_IP, ports)), [protocol]*(len(DEVICES_IP)*len(ports))))
     thread.join()
 
 def port_scan(combination, protocol="TCP"):
     global PORT_SCAN_LOG, N_PORTS_SCANNED
     ip,port = combination
-    N_PORTS_SCANNED+=1
     if protocol=="TCP" and port_scanner.tcp_scan(port, ip):
         PORT_SCAN_LOG[ip].update({port:"Open"})
     elif protocol=="UDP":
         result = port_scanner.udp_scan(port, ip)
         PORT_SCAN_LOG[ip].update({port:result})
+    
+    N_PORTS_SCANNED+=1
 
 
 def print_port_scan_log():
