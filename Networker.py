@@ -1,4 +1,4 @@
-import socket, threading, time, itertools, concurrent.futures
+import socket, threading, time, itertools, concurrent.futures, getmac
 import scapy.all as scapy
 import common_ports, port_scanner
 
@@ -19,24 +19,31 @@ def get_local_ip():
     return ip
 
 def find_devices():
-    global LOCAL_SUBNET
+    global LOCAL_SUBNET, LOCAL_IP
     arp_request = scapy.ARP(pdst=LOCAL_SUBNET+"0/24")
     broadcast = scapy.Ether(dst="ff:ff:ff:ff:ff:ff")
     arp_broadcast = broadcast/arp_request
-    device_ips = [device[1].psrc for device in scapy.srp(arp_broadcast, timeout=1, verbose=False)[0]]
-    return device_ips
+    device_IPs = [device[1].psrc for device in scapy.srp(arp_broadcast, timeout=1, verbose=False)[0]] + [LOCAL_IP]
+    device_MAC = [device[1].hwsrc for device in scapy.srp(arp_broadcast, timeout=1, verbose=False)[0]] + [getmac.get_mac_address()]
+    return device_IPs,  device_MAC
 
 def get_device_data():
-    pass
+    global DEVICES
+    DEVICES = []
+    device_ip, device_mac = find_devices()
+    for i in range(len(device_ip)):
+        try: name, _, _ = socket.gethostbyaddr(device_ip[i])
+        except socket.herror: name = "Name Not Found"
+        DEVICES += [(device_ip[i], device_mac[i], name)]
 
 def port_scan_threader(hard=False, protocol="TCP"):
-    global LOCAL_SUBNET, COMMON_TCP_PORTS, DEVICES, N_PORTS_SCANNED, COMMON_UDP_PORTS
+    global LOCAL_SUBNET, COMMON_TCP_PORTS, DEVICES_IP, N_PORTS_SCANNED, COMMON_UDP_PORTS
     N_PORTS_SCANNED = 0
     ports = range(65536) if hard else list(COMMON_TCP_PORTS.keys()) 
     if protocol=="UDP": ports = list(COMMON_UDP_PORTS.keys())
 
-    combinations = list(itertools.product(DEVICES, ports))
-    thread = threading.Thread(target=percentage_bar, args=(len(ports),len(DEVICES)))
+    combinations = list(itertools.product(DEVICES_IP, ports))
+    thread = threading.Thread(target=percentage_bar, args=(len(ports),len(DEVICES_IP)))
     thread.start()
     with concurrent.futures.ThreadPoolExecutor(max_workers=1024) as executor:
         _ = list(executor.map(port_scan, combinations, [protocol]*len(combinations)))
@@ -86,7 +93,7 @@ COMMON_UDP_PORTS = common_ports.COMMON_UDP_PORTS
 print("-------------------- NETWORKER --------------------")
 
 def main():
-    global LOCAL_IP, LOCAL_SUBNET, DEVICES, PORT_SCAN_LOG    
+    global LOCAL_IP, LOCAL_SUBNET, DEVICES_IP, DEVICES_MAC, DEVICES_NAME, PORT_SCAN_LOG    
     print()
     print("[1] Find your local IP address on your network")
     print("[2] Scan for devices on your network")
@@ -108,11 +115,19 @@ def main():
     LOCAL_IP = get_local_ip()                                                   # Eg: "192.168.20.15"
     if LOCAL_IP=="{IP could not be found}": raise SystemExit("Exiting: Local IP fell back to loopback.")
     LOCAL_SUBNET = str(".".join(LOCAL_IP.split(".")[:3]) + ".")                 # Eg: "192.168.20."
-    DEVICES = find_devices()                                                    # Eg: [192.168.20.1, 192.168.20.15]
-    PORT_SCAN_LOG = dict(zip(DEVICES, [{} for _ in range(len(DEVICES))]))
-    
+    get_device_data()
+    DEVICES_IP = [i[0] for i in DEVICES]                                        # Eg: [192.168.20.1, 192.168.20.15]
+
+    PORT_SCAN_LOG = dict(zip(DEVICES_IP, [{} for _ in range(len(DEVICES_IP))]))
+
     if choice==1: print(f"Your local IP address is {LOCAL_IP}")
-    elif choice==2: get_device_data()
+    elif choice==2: 
+        print("|  IP  ADDRESS  |    MAC ADDRESS    |       NAME       |")
+        DEVICES_MAC = [i[1] for i in DEVICES]
+        DEVICES_NAME = [i[2] for i in DEVICES]
+        for i in range(len(DEVICES)):
+            print(f'|{DEVICES_IP[i]:<15}|{DEVICES_MAC[i]:<19}|{DEVICES_NAME[i]:<18}|')
+
     elif choice==3: port_scan_threader(); port_scan_threader(protocol="UDP"); print_port_scan_log()
     elif choice==4: port_scan_threader(hard=True); print_port_scan_log()
     elif choice==0: return "E"
